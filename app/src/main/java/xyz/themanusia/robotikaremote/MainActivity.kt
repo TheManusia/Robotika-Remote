@@ -44,10 +44,12 @@ import xyz.themanusia.robotikaremote.ui.theme.RobotikaRemoteTheme
 import java.io.IOException
 import java.io.OutputStream
 import java.util.UUID
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 
-private val MY_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
+private val MY_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -121,17 +123,25 @@ fun MainView() {
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxSize()
         ) {
-            Button(onClick = {
-                calibrateMode.value = !calibrateMode.value
-                if (calibrateMode.value) {
-                    maxX.intValue = 1
-                    maxY.intValue = 1
+            Row(modifier = Modifier) {
+                Button(onClick = {
+                    connectHC05(bluetoothAdapter)
+                }) {
+                    Text(text = "Connect")
                 }
-            }) {
-                if (calibrateMode.value) {
-                    Text(text = "Calibrate")
-                } else {
-                    Text(text = "Control")
+                Box(modifier = Modifier.padding(8.dp))
+                Button(onClick = {
+                    calibrateMode.value = !calibrateMode.value
+                    if (calibrateMode.value) {
+                        maxX.intValue = 1
+                        maxY.intValue = 1
+                    }
+                }) {
+                    if (calibrateMode.value) {
+                        Text(text = "Calibrate")
+                    } else {
+                        Text(text = "Control")
+                    }
                 }
             }
             Box(modifier = Modifier.padding(8.dp))
@@ -142,7 +152,7 @@ fun MainView() {
             }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
             Box(modifier = Modifier.padding(8.dp))
             Button(onClick = {
-                sendData("S")
+                sendData(0)
             }) {
                 Text(text = "Switch Mode")
             }
@@ -153,15 +163,16 @@ fun MainView() {
             ) {
                 JoyStick(
                     moved = { x, y ->
-                        var xD = (x - 0.5).toInt()
+                        var xD = (x).toInt()
                         var yD = (y + 0.5).toInt()
                         if (calibrateMode.value) {
                             maxX.intValue = max(maxX.intValue, xD)
                             maxY.intValue = max(maxY.intValue, yD)
                         } else {
-                            xD = (x / maxX.intValue * maxSpeed.intValue).toInt()
-                            yD = (y / maxY.intValue * maxSpeed.intValue).toInt()
-                            sendData("R;$xD;$yD;$x;$y")
+                            xD = floor((x / maxX.intValue * maxSpeed.intValue)).toInt()
+                            yD = ceil((y / maxY.intValue * maxSpeed.intValue)).toInt()
+                            val res = arrayOf(5, xD, yD)
+                            sendData(ByteArray(res.size) { res[it].toByte() })
                         }
                     },
                 )
@@ -170,19 +181,19 @@ fun MainView() {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.padding(16.dp)
                 ) {
-                    Button(onClick = { sendData("A") }) {
+                    Button(onClick = { sendData(1) }) {
                         Text("A")
                     }
                     Row {
-                        Button(onClick = { sendData("B") }) {
+                        Button(onClick = { sendData(2) }) {
                             Text("B")
                         }
                         Box(modifier = Modifier.padding(8.dp))
-                        Button(onClick = { sendData("C") }) {
+                        Button(onClick = { sendData(3) }) {
                             Text("C")
                         }
                     }
-                    Button(onClick = { sendData("D") }) {
+                    Button(onClick = { sendData(4) }) {
                         Text("D")
                     }
                 }
@@ -200,16 +211,21 @@ fun GreetingPreview() {
     }
 }
 
-fun sendData(data: String) {
-    Log.d("Ambasing", "sendData: $data")
-    dataExchaneInstance?.write(data.toByteArray())
+fun sendData(data: Int) {
+    dataExchaneInstance?.write(data)
+}
+
+fun sendData(data: ByteArray) {
+    dataExchaneInstance?.write(data)
 }
 
 @SuppressLint("MissingPermission")
 private fun connectHC05(bluetoothAdapter: BluetoothAdapter?) {
+    Log.i("blt", "connectHC05: Connecting to HC-05")
     val pairedDevices: Set<BluetoothDevice>? = bluetoothAdapter?.bondedDevices
-    val hc05Device = pairedDevices?.find { it.name == "HC-05" }
+    val hc05Device = pairedDevices?.find { it.address == "58:56:00:00:9F:43" }
     if (hc05Device != null) {
+        Log.i("blt", "connectHC05: Device Found")
         ConnectThread(hc05Device).start()
     }
 }
@@ -225,7 +241,7 @@ class ConnectThread(private val monDevice: BluetoothDevice) : Thread() {
             mmSocket?.connect()
             Log.i("blt", "run: Connected")
         } catch (e: IOException) {
-            Log.i("blt", "Error connecting to device")
+            Log.e("blt", "Error connecting to device", e)
         }
         dataExchaneInstance = DataExchange(mmSocket!!)
     }
@@ -236,10 +252,21 @@ var dataExchaneInstance: DataExchange? = null
 class DataExchange(mmSocket: BluetoothSocket) : Thread() {
     private val mmOutStream: OutputStream = mmSocket.outputStream
 
+    fun write(bytes: Int) {
+        try {
+            mmOutStream.write(bytes)
+            Log.i("blt", "write: Data Sent $bytes")
+        } catch (e: IOException) {
+            Log.i("blt", "write: Error writing to output stream", e)
+        }
+    }
+
     fun write(bytes: ByteArray) {
         try {
             mmOutStream.write(bytes)
-        } catch (_: IOException) {
+            Log.i("blt", "write: Data Sent $bytes")
+        } catch (e: IOException) {
+            Log.i("blt", "write: Error writing to output stream", e)
         }
     }
 }
