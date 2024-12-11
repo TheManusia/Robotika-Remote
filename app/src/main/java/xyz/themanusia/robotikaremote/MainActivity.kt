@@ -161,21 +161,27 @@ fun MainView() {
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                JoyStick(
-                    moved = { x, y ->
-                        var xD = (x).toInt()
-                        var yD = (y + 0.5).toInt()
-                        if (calibrateMode.value) {
-                            maxX.intValue = max(maxX.intValue, xD)
-                            maxY.intValue = max(maxY.intValue, yD)
-                        } else {
-                            xD = floor((x / maxX.intValue * maxSpeed.intValue)).toInt()
-                            yD = ceil((y / maxY.intValue * maxSpeed.intValue)).toInt()
-                            val res = arrayOf(5, xD, yD)
-                            sendData(ByteArray(res.size) { res[it].toByte() })
+                Column(
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Button(onClick = { sendData(5) }) {
+                        Text("U")
+                    }
+                    Row {
+                        Button(onClick = { sendData(6) }) {
+                            Text("L")
                         }
-                    },
-                )
+                        Box(modifier = Modifier.padding(8.dp))
+                        Button(onClick = { sendData(7) }) {
+                            Text("R")
+                        }
+                    }
+                    Button(onClick = { sendData(8) }) {
+                        Text("D")
+                    }
+                }
                 Column(
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally,
