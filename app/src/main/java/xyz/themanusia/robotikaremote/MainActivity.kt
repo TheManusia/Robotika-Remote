@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.MotionEvent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -22,32 +23,29 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import com.manalkaff.jetstick.JoyStick
 import xyz.themanusia.robotikaremote.ui.theme.RobotikaRemoteTheme
 import java.io.IOException
 import java.io.OutputStream
 import java.util.UUID
-import kotlin.math.ceil
-import kotlin.math.floor
-import kotlin.math.max
-import kotlin.math.min
 
 private val MY_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
 
@@ -63,14 +61,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/*
-    S -> Switch Mode
-    R -> Run
-    A -> A
-    B -> B
-    C -> C
-    D -> D
- */
+@OptIn(ExperimentalComposeUiApi::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun MainView() {
@@ -113,10 +104,7 @@ fun MainView() {
         Toast.makeText(context, connectStatus.value, Toast.LENGTH_SHORT).show()
     }
 
-    val maxX = remember { mutableIntStateOf(1) }
-    val maxY = remember { mutableIntStateOf(1) }
-    val maxSpeed = remember { mutableIntStateOf(255) }
-    val calibrateMode = remember { mutableStateOf(true) }
+    var maxSpeed by remember { mutableFloatStateOf(255f) }
     Scaffold(modifier = Modifier.fillMaxSize()) {
         Column(
             verticalArrangement = Arrangement.Center,
@@ -130,26 +118,14 @@ fun MainView() {
                     Text(text = "Connect")
                 }
                 Box(modifier = Modifier.padding(8.dp))
-                Button(onClick = {
-                    calibrateMode.value = !calibrateMode.value
-                    if (calibrateMode.value) {
-                        maxX.intValue = 1
-                        maxY.intValue = 1
-                    }
-                }) {
-                    if (calibrateMode.value) {
-                        Text(text = "Calibrate")
-                    } else {
-                        Text(text = "Control")
-                    }
-                }
             }
-            Box(modifier = Modifier.padding(8.dp))
-            TextField(value = "${maxSpeed.intValue}", onValueChange = {
-                if (it.isEmpty() || it.matches(Regex("^\\d+\$"))) {
-                    maxSpeed.intValue = if (it.isEmpty()) 1 else min(it.toInt(), 255)
-                }
-            }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+            Box(modifier = Modifier.padding(horizontal = 64.dp)) {
+                Slider(value = maxSpeed / 255, onValueChange = {
+                    maxSpeed = it * 255
+                    sendData("S$maxSpeed")
+                })
+            }
+            Text(text = "$maxSpeed")
             Box(modifier = Modifier.padding(8.dp))
             Button(onClick = {
                 sendData(0)
@@ -166,19 +142,63 @@ fun MainView() {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.padding(16.dp)
                 ) {
-                    Button(onClick = { sendData(5) }) {
+                    Button(onClick = {  }, modifier = Modifier.pointerInteropFilter {
+                        when (it.action) {
+                            MotionEvent.ACTION_DOWN -> {
+                                sendData(1)
+                            }
+
+                            MotionEvent.ACTION_UP -> {
+                                sendData(2)
+                            }
+                        }
+                        true
+                    }) {
                         Text("U")
                     }
                     Row {
-                        Button(onClick = { sendData(6) }) {
+                        Button(onClick = {  }, modifier = Modifier.pointerInteropFilter {
+                            when (it.action) {
+                                MotionEvent.ACTION_DOWN -> {
+                                    sendData(3)
+                                }
+
+                                MotionEvent.ACTION_UP -> {
+                                    sendData(4)
+                                }
+                            }
+                            true
+                        }) {
                             Text("L")
                         }
                         Box(modifier = Modifier.padding(8.dp))
-                        Button(onClick = { sendData(7) }) {
+                        Button(onClick = {  }, modifier = Modifier.pointerInteropFilter {
+                        when (it.action) {
+                            MotionEvent.ACTION_DOWN -> {
+                                sendData(5)
+                            }
+
+                            MotionEvent.ACTION_UP -> {
+                                sendData(6)
+                            }
+                        }
+                        true
+                    }) {
                             Text("R")
                         }
                     }
-                    Button(onClick = { sendData(8) }) {
+                    Button(onClick = {  }, modifier = Modifier.pointerInteropFilter {
+                        when (it.action) {
+                            MotionEvent.ACTION_DOWN -> {
+                                sendData(7)
+                            }
+
+                            MotionEvent.ACTION_UP -> {
+                                sendData(8)
+                            }
+                        }
+                        true
+                    }) {
                         Text("D")
                     }
                 }
@@ -187,19 +207,63 @@ fun MainView() {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.padding(16.dp)
                 ) {
-                    Button(onClick = { sendData(1) }) {
+                    Button(onClick = {  }, modifier = Modifier.pointerInteropFilter {
+                        when (it.action) {
+                            MotionEvent.ACTION_DOWN -> {
+                                sendData(9)
+                            }
+
+                            MotionEvent.ACTION_UP -> {
+                                sendData(10)
+                            }
+                        }
+                        true
+                    }) {
                         Text("A")
                     }
                     Row {
-                        Button(onClick = { sendData(2) }) {
+                        Button(onClick = {  }, modifier = Modifier.pointerInteropFilter {
+                        when (it.action) {
+                            MotionEvent.ACTION_DOWN -> {
+                                sendData(11)
+                            }
+
+                            MotionEvent.ACTION_UP -> {
+                                sendData(12)
+                            }
+                        }
+                        true
+                    }) {
                             Text("B")
                         }
                         Box(modifier = Modifier.padding(8.dp))
-                        Button(onClick = { sendData(3) }) {
+                        Button(onClick = {  }, modifier = Modifier.pointerInteropFilter {
+                        when (it.action) {
+                            MotionEvent.ACTION_DOWN -> {
+                                sendData(13)
+                            }
+
+                            MotionEvent.ACTION_UP -> {
+                                sendData(14)
+                            }
+                        }
+                        true
+                    }) {
                             Text("C")
                         }
                     }
-                    Button(onClick = { sendData(4) }) {
+                    Button(onClick = {  }, modifier = Modifier.pointerInteropFilter {
+                        when (it.action) {
+                            MotionEvent.ACTION_DOWN -> {
+                                sendData(15)
+                            }
+
+                            MotionEvent.ACTION_UP -> {
+                                sendData(16)
+                            }
+                        }
+                        true
+                    }) {
                         Text("D")
                     }
                 }
@@ -221,7 +285,7 @@ fun sendData(data: Int) {
     dataExchaneInstance?.write(data)
 }
 
-fun sendData(data: ByteArray) {
+fun sendData(data: String) {
     dataExchaneInstance?.write(data)
 }
 
@@ -267,9 +331,9 @@ class DataExchange(mmSocket: BluetoothSocket) : Thread() {
         }
     }
 
-    fun write(bytes: ByteArray) {
+    fun write(bytes: String) {
         try {
-            mmOutStream.write(bytes)
+            mmOutStream.write(bytes.toByteArray())
             Log.i("blt", "write: Data Sent $bytes")
         } catch (e: IOException) {
             Log.i("blt", "write: Error writing to output stream", e)
