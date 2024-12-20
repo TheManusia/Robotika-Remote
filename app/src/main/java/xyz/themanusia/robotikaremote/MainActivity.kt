@@ -122,7 +122,7 @@ fun MainView() {
             Box(modifier = Modifier.padding(horizontal = 64.dp)) {
                 Slider(value = maxSpeed / 255, onValueChange = {
                     maxSpeed = it * 255
-                    sendData("${maxSpeed+20}")
+                    sendData(maxSpeed+20)
                 })
             }
             Text(text = "$maxSpeed")
